@@ -1,0 +1,18 @@
+[package]
+	name = "midi_file_performer"
+	version = "0.1.0"
+	license = "MIT OR Apache-2.0"
+	authors = ["Brandon Walsh <metasophiea@gmail.com>"]
+	readme = "README.md"
+	description = "A library for the playback of MIDI files."
+	edition = "2021"
+	repository = "https://github.com/metasophiea/midi_file_performer"
+	keywords = [ "midi", "audio", "music", "smf" ]
+
+[dependencies]
+	crossbeam-channel = "0.5.14"
+	midly = "0.5.3"
+
+[dev-dependencies]
+	clap = { version = "4.5.26", features = ["derive"] }
+	midir = "0.9.1"

@@ -72,6 +72,11 @@ impl Score {
 
 impl Score {
 	pub fn calculate_duration(&self, speed:f32) -> Duration {
+		//protection
+			if speed == 0.0 {
+				return Duration::MAX;
+			}
+
 		//create new timer
 			let mut working_timer = Timer::try_from(self.timing).expect("we ensured that the timing format was compatible in the \"new\" method");
 			working_timer.set_speed(speed);
@@ -85,6 +90,11 @@ impl Score {
 	}
 
 	pub fn calculate_duration_until(&self, speed:f32, index:usize) -> Duration {
+		//protection
+			if speed == 0.0 {
+				return Duration::MAX;
+			}
+
 		//create new timer
 			let mut working_timer = Timer::try_from(self.timing).expect("we ensured that the timing format was compatible in the \"new\" method");
 			working_timer.set_speed(speed);

@@ -61,6 +61,10 @@ impl Track {
 
 impl Track {
 	pub fn calculate_duration(&self, timer:&mut Timer) -> Duration {
+		if timer.get_speed() == 0.0 {
+			return Duration::MAX
+		}
+		
 		let mut counter = Duration::default();
 		for potential_simultaneous_events in &self.potential_simultaneous_events_sequence {
 			counter += timer.calculate_duration_of_ticks(1);
@@ -77,6 +81,10 @@ impl Track {
 		counter
 	}
 	pub fn calculate_duration_until(&self, timer:&mut Timer, index:usize) -> Duration {
+		if timer.get_speed() == 0.0 {
+			return Duration::MAX
+		}
+
 		let mut counter = Duration::default();
 		for (event_index, potential_simultaneous_events) in self.potential_simultaneous_events_sequence.iter().enumerate() {
 			if event_index == index {

@@ -18,3 +18,11 @@ impl MidiEvent {
 		}
 	}
 }
+
+impl MidiEvent {
+	pub fn encode(&self) -> Vec<u8> {
+		let mut buf = Vec::new();
+		self.into_live_event().write(&mut buf).unwrap();
+		buf
+	}
+}

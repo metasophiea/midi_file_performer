@@ -2,6 +2,7 @@ use crossbeam_channel::SendError;
 
 use crate::ToConsole;
 
+#[derive(Debug)]
 pub enum Error {
 	/// The timer could not be created due to the use of an incompatible timing value.
 	TimerCreation,

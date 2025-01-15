@@ -8,6 +8,7 @@ use crate::{
 	score::Error as ScoreError
 };
 
+#[derive(Debug)]
 pub enum Error {
 	/// An issue related to the communication channels between the console and engine.
 	Communication(SendError<ToEngine>),

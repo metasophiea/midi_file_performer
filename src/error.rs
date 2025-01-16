@@ -10,6 +10,8 @@ use crate::{
 
 #[derive(Debug)]
 pub enum Error {
+	/// The selected position is beyond the bounds of the midi score.
+	BeyondScoreLength,
 	/// An issue related to the communication channels between the console and engine.
 	Communication(SendError<ToEngine>),
 	/// An [`EngineError`].

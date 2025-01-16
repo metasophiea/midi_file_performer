@@ -42,14 +42,14 @@ pub fn engine(
 				ToEngine::Stop => {
 					play = false;
 					position = 0;
-					if let Some(microseconds_per_beat) = score.get_tempo_at(position) {
-						timer.change_tempo(u32::from(*microseconds_per_beat));
+					if let Some(microseconds_per_beat) = score.get_microseconds_per_beat_at(position) {
+						timer.change_tempo(u32::from(microseconds_per_beat));
 					}
 				},
 				ToEngine::JumpTo(new_position) => {
 					position = new_position;
-					if let Some(microseconds_per_beat) = score.get_tempo_at(position) {
-						timer.change_tempo(u32::from(*microseconds_per_beat));
+					if let Some(microseconds_per_beat) = score.get_microseconds_per_beat_at(position) {
+						timer.change_tempo(u32::from(microseconds_per_beat));
 					}
 				},
 				ToEngine::SetSpeed(new_speed) => {

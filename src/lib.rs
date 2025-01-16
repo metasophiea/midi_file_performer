@@ -86,6 +86,9 @@ impl Performer {
 	pub fn is_playing(&self) -> bool {
 		self.is_playing
 	}
+	pub fn get_track_count(&self) -> usize {
+		self.score.get_track_count()
+	}
 	
 	pub fn get_length_in_ticks(&self) -> usize {
 		self.score.len()
@@ -98,6 +101,19 @@ impl Performer {
 	}
 	pub fn get_position_in_duration(&self) -> Duration {
 		self.score.calculate_duration_until(self.speed, self.position)
+	}
+
+	pub fn get_current_microseconds_per_beat(&self) -> usize {
+		let position = if self.position >= self.score.len() {
+			self.score.len() - 1
+		} else {
+			self.position
+		};
+
+		u32::from(
+			self.score.get_microseconds_per_beat_at(position)
+				.unwrap_or_else(|| panic!("position is either beyond the length of the score or the score does not contain any tempo messages"))
+		) as usize
 	}
 }
 
@@ -146,6 +162,10 @@ impl Performer {
 	/// # Errors
 	/// Will return an [`Error::Communication`] if there is a communication issue with the engine.
 	pub fn jump_to(&mut self, position:usize) -> Result<(), Error> {
+		if position >= self.score.len() {
+			return Err(Error::BeyondScoreLength);
+		}
+
 		if let Err(err) = self.channel_to_engine.send(ToEngine::JumpTo(position)) {
 			Err(Error::Communication(err))
 		} else {

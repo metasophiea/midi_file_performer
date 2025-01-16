@@ -11,6 +11,9 @@ mod simultaneous_events;
 mod track;
 mod error;
 
+#[cfg(test)]
+mod tests;
+
 pub use midi_event::MidiEvent;
 pub use meta_event::MetaEvent;
 pub use event::Event;
@@ -21,7 +24,9 @@ pub use error::Error;
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Score {
 	timing: Timing,
-	tracks: Vec<Track>
+	tracks: Vec<Track>,
+
+	microseconds_per_beat_changes: Vec<(usize, u24)>
 }
 
 impl Score {
@@ -48,19 +53,35 @@ impl Score {
 			return Err(Error::TimingFormat);
 		}
 
+		let tracks = match standard_midi_file.header.format {
+			Format::SingleTrack | Format::Parallel=> Score::parallel(&standard_midi_file.tracks),
+			Format::Sequential => Score::sequential(&standard_midi_file.tracks),
+		};
+
+		let mut microseconds_per_beat_changes:Vec<(usize, u24)> = tracks
+			.iter()
+			.map(|track| track.get_all_tempos().to_vec())
+			.flatten()
+			.collect();
+		microseconds_per_beat_changes.sort_by_key(|tempo| tempo.0);
+		if microseconds_per_beat_changes.is_empty() {
+			return Err(Error::NoTempo);
+		}
+
 		Ok(
 			Score {
 				timing: standard_midi_file.header.timing,
-				tracks: match standard_midi_file.header.format {
-					Format::SingleTrack | Format::Parallel=> Score::parallel(&standard_midi_file.tracks),
-					Format::Sequential => Score::sequential(&standard_midi_file.tracks),
-				}
+				tracks,
+				microseconds_per_beat_changes,
 			}
 		)
 	}
 }
 
 impl Score {
+	pub fn get_track_count(&self) -> usize {
+		self.tracks.len()
+	}
 	pub fn len(&self) -> usize {
 		self.tracks	
 			.iter()
@@ -81,15 +102,21 @@ impl Score {
 			let mut working_timer = Timer::try_from(self.timing).expect("we ensured that the timing format was compatible in the \"new\" method");
 			working_timer.set_speed(speed);
 
-		//calculate the length of each track and return the biggest value
-			self.tracks
-				.iter()
-				.map(|track| track.calculate_duration(&mut working_timer))
-				.max()
-				.unwrap_or(Duration::default())
+		//calculate
+			let mut counter = Duration::default();
+			let mut last_index = 0;
+			for (index, microseconds_per_beat) in &self.microseconds_per_beat_changes {
+				counter += working_timer.calculate_duration_of_ticks(*index - last_index);
+				last_index = *index;
+				working_timer.change_tempo(u32::from(*microseconds_per_beat));
+			}
+
+			counter += working_timer.calculate_duration_of_ticks(self.len() - last_index);
+
+		counter
 	}
 
-	pub fn calculate_duration_until(&self, speed:f32, index:usize) -> Duration {
+	pub fn calculate_duration_until(&self, speed:f32, index_limit:usize) -> Duration {
 		//protection
 			if speed == 0.0 {
 				return Duration::MAX;
@@ -99,12 +126,22 @@ impl Score {
 			let mut working_timer = Timer::try_from(self.timing).expect("we ensured that the timing format was compatible in the \"new\" method");
 			working_timer.set_speed(speed);
 
-		//calculate the length of each track and return the biggest value
-			self.tracks
-				.iter()
-				.map(|track| track.calculate_duration_until(&mut working_timer, index))
-				.max()
-				.unwrap_or(Duration::default())
+		//calculate
+			let mut counter = Duration::default();
+			let mut last_index = 0;
+			for (index, microseconds_per_beat) in &self.microseconds_per_beat_changes {
+				if index >= &index_limit {
+					break;
+				}
+
+				counter += working_timer.calculate_duration_of_ticks(*index - last_index);
+				last_index = *index;
+				working_timer.change_tempo(u32::from(*microseconds_per_beat));
+			}
+
+			counter += working_timer.calculate_duration_of_ticks(index_limit - last_index);
+
+		counter
 	}
 
 	pub fn gather_all_events_for_index(&self, index:usize) -> Option<Vec<(usize, &SimultaneousEvents)>> {
@@ -136,15 +173,22 @@ impl Score {
 }
 
 impl Score {
-	pub fn get_tempo_at(&self, index:usize) -> Option<&u24> {
-		if let Some((_, tempo)) = self.tracks
-			.iter()
-			.filter_map(|track| track.get_tempo_at(index))
-			.max_by_key(|(index, _)| *index)
-		{
-			Some(tempo)
-		} else {
+	pub fn get_microseconds_per_beat_changes(&self) -> &[(usize, u24)] {
+		&self.microseconds_per_beat_changes
+	}
+	pub fn get_microseconds_per_beat_at(&self, index:usize) -> Option<u24> {
+		if index == 0 {
+			self.microseconds_per_beat_changes.get(0).map(|(_, tempo)| *tempo)
+		} else if index >= self.len() {
 			None
+		} else if self.microseconds_per_beat_changes.len() == 1 {
+			self.microseconds_per_beat_changes.get(0).map(|(_, tempo)| *tempo)
+		} else {
+			self.microseconds_per_beat_changes
+				.iter()
+				.filter(|(tempo_index, _)| tempo_index <= &index)
+				.last()
+				.map(|(_, tempo)| *tempo)
 		}
 	}
 

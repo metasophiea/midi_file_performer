@@ -1,9 +1,5 @@
-use std::time::Duration;
-
 use midly::num::u24;
-use midly::TrackEvent;
-
-use crate::Timer;
+use midly::{MetaMessage, TrackEvent, TrackEventKind};
 
 use super::meta_event::MetaEvent;
 use super::Event;
@@ -11,7 +7,8 @@ use super::simultaneous_events::SimultaneousEvents;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Track {
-	potential_simultaneous_events_sequence: Vec<Option<SimultaneousEvents>>
+	potential_simultaneous_events_sequence: Vec<Option<SimultaneousEvents>>,
+	all_tempos: Vec<(usize, u24)>
 }
 // eg. [[Event], none, none, none, [Event, Event], none, none, [Event]]
 
@@ -20,7 +17,15 @@ impl From<&Vec<TrackEvent<'_>>> for Track {
 		//create vector
 			let total_ticks = track_events
 				.iter()
-				.map(|track_event| u32::from(track_event.delta) as usize)
+				.enumerate()
+				.map(|(_index, track_event)| {
+					//correct "EndOfTrack being too far out" situation
+					if TrackEventKind::Meta(MetaMessage::EndOfTrack) == track_event.kind {
+						0
+					} else {
+						u32::from(track_event.delta) as usize
+					}
+				})
 				.sum::<usize>()
 				+ 1;
 			let mut result:Vec<Option<SimultaneousEvents>> = vec![None; total_ticks];
@@ -28,6 +33,10 @@ impl From<&Vec<TrackEvent<'_>>> for Track {
 		//populate vector
 			let mut position = 0;
 			for track_event in track_events {
+				if TrackEventKind::Meta(MetaMessage::EndOfTrack) == track_event.kind {
+					continue;
+				}
+
 				position += u32::from(track_event.delta) as usize;
 				if let Ok(event) = Event::try_from(track_event.kind) {
 					if let Some(simultaneous_events) = &mut result[position] {
@@ -37,9 +46,33 @@ impl From<&Vec<TrackEvent<'_>>> for Track {
 					}
 				}
 			}
+		
+		//all_tempos
+			let all_tempos = result
+				.iter()
+				.enumerate()
+				.filter_map(|(index, potential_simultaneous_event)| 
+					potential_simultaneous_event
+						.as_ref()
+						.map(|simultaneous_event|
+							simultaneous_event.events
+								.iter()
+								.filter_map(|event|
+									if let Event::Meta(MetaEvent::Tempo(microseconds_per_beat)) = event {
+										Some((index, *microseconds_per_beat))
+									} else {
+										None
+									}
+								)
+								.collect::<Vec<(usize, u24)>>()
+					)
+				)
+				.flatten()
+				.collect();
 
 		Track {
 			potential_simultaneous_events_sequence: result,
+			all_tempos
 		}
 	}
 }
@@ -60,75 +93,8 @@ impl Track {
 }
 
 impl Track {
-	pub fn calculate_duration(&self, timer:&mut Timer) -> Duration {
-		if timer.get_speed() == 0.0 {
-			return Duration::MAX
-		}
-		
-		let mut counter = Duration::default();
-		for potential_simultaneous_events in &self.potential_simultaneous_events_sequence {
-			counter += timer.calculate_duration_of_ticks(1);
-
-			if let Some(simultaneous_events) = potential_simultaneous_events {
-				for event in &simultaneous_events.events {
-					if let Event::Meta(MetaEvent::Tempo(val)) = event {
-						timer.change_tempo(u32::from(*val));
-					}
-				}
-			}
-		}
-
-		counter
-	}
-	pub fn calculate_duration_until(&self, timer:&mut Timer, index:usize) -> Duration {
-		if timer.get_speed() == 0.0 {
-			return Duration::MAX
-		}
-
-		let mut counter = Duration::default();
-		for (event_index, potential_simultaneous_events) in self.potential_simultaneous_events_sequence.iter().enumerate() {
-			if event_index == index {
-				break;
-			}
-
-			counter += timer.calculate_duration_of_ticks(1);
-
-			if let Some(simultaneous_events) = potential_simultaneous_events {
-				for event in &simultaneous_events.events {
-					if let Event::Meta(MetaEvent::Tempo(val)) = event {
-						timer.change_tempo(u32::from(*val));
-					}
-				}
-			}
-		}
-
-		counter
-	}
-}
-
-impl Track {
-	pub fn get_tempo_at(&self, index:usize) -> Option<(usize, &u24)> {
-		if self.potential_simultaneous_events_sequence.len() <= index {
-			return None;
-		}
-
-		self.potential_simultaneous_events_sequence[0..index]
-			.iter()
-			.enumerate()
-			.filter_map(|(index, potential_simultaneous_event)| {
-				if let Some(simultaneous_event) = potential_simultaneous_event {
-					simultaneous_event.events.iter().find_map(|event| {
-						if let Event::Meta(MetaEvent::Tempo(microseconds_per_beat)) = event {
-							Some((index, microseconds_per_beat))
-						} else {
-							None
-						}
-					})
-				} else {
-					None
-				}
-			})
-			.last()
+	pub fn get_all_tempos(&self) -> &[(usize, u24)] {
+		&self.all_tempos
 	}
 	pub fn calculate_ticks_until_next_events_from_index(&self, index:usize) -> Option<usize> {
 		if self.potential_simultaneous_events_sequence.len() <= index + 1 {

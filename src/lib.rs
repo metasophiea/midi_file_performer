@@ -86,16 +86,17 @@ impl Performer {
 	pub fn is_playing(&self) -> bool {
 		self.is_playing
 	}
-	pub fn get_length(&self) -> usize {
+	
+	pub fn get_length_in_ticks(&self) -> usize {
 		self.score.len()
 	}
-	pub fn get_position(&self) -> usize {
+	pub fn get_position_in_ticks(&self) -> usize {
 		self.position
 	}
-	pub fn get_duration(&self) -> Duration {
+	pub fn get_length_in_duration(&self) -> Duration {
 		self.score.calculate_duration(self.speed)
 	}
-	pub fn get_progress(&self) -> Duration {
+	pub fn get_position_in_duration(&self) -> Duration {
 		self.score.calculate_duration_until(self.speed, self.position)
 	}
 }

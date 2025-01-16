@@ -59,7 +59,7 @@ fn main() {
 	
 	//perform
 		let mut performer = Performer::new(standard_midi_file);
-		performer.jump_to(performer.get_length()/2).ok();
+		performer.jump_to(performer.get_length_in_ticks()/2).ok();
 		performer.play().ok();
 
 	loop {

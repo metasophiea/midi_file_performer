@@ -60,7 +60,7 @@ fn main() {
 	//perform
 		let mut performer = Performer::new(standard_midi_file);
 		performer.play().ok();
-		println!("duration: {:?}", performer.get_duration());
+		println!("duration: {:?}", performer.get_length_in_duration());
 
 	let mut tick = 0;
 	loop {
@@ -71,7 +71,7 @@ fn main() {
 		if let Some(events) = performer.poll().ok().unwrap() {
 			if tick == 1_000_000 {
 				performer.set_speed(2.0).ok();
-				println!("new duration: {:?}", performer.get_duration());
+				println!("new duration: {:?}", performer.get_length_in_duration());
 			}
 
 			events.iter().for_each(|(_track, midi_event)| {

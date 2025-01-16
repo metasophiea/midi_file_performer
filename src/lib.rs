@@ -32,6 +32,7 @@ pub struct Performer {
 	is_playing: bool,
 	position: usize,
 	speed: f32,
+	looping: bool
 }
 
 impl Performer {
@@ -68,6 +69,7 @@ impl Performer {
 				is_playing: false,
 				position: 0,
 				speed: 1.0,
+				looping: false
 			}
 		)
 	
@@ -83,13 +85,20 @@ impl Performer {
 }
 
 impl Performer {
-	pub fn is_playing(&self) -> bool {
-		self.is_playing
-	}
 	pub fn get_track_count(&self) -> usize {
 		self.score.get_track_count()
 	}
-	
+
+	pub fn is_playing(&self) -> bool {
+		self.is_playing
+	}
+	pub fn get_speed(&self) -> f32 {
+		self.speed
+	}
+	pub fn is_looping(&self) -> bool {
+		self.looping
+	}
+
 	pub fn get_length_in_ticks(&self) -> usize {
 		self.score.len()
 	}
@@ -102,7 +111,7 @@ impl Performer {
 	pub fn get_position_in_duration(&self) -> Duration {
 		self.score.calculate_duration_until(self.speed, self.position)
 	}
-
+	
 	pub fn get_current_microseconds_per_beat(&self) -> usize {
 		let position = if self.position >= self.score.len() {
 			self.score.len() - 1
@@ -191,6 +200,20 @@ impl Performer {
 			Ok(())
 		}
 	}
+
+	/// Instruct the engine to return to the beginning of the midi score when it reaches the end.
+	///
+	/// # Errors
+	/// - Will return an [`Error::Communication`] if there is a communication issue with the engine.
+	pub fn set_looping(&mut self, looping:bool) -> Result<(), Error> {
+		self.looping = looping;
+
+		if let Err(err) = self.channel_to_engine.send(ToEngine::SetLooping(looping)) {
+			Err(Error::Communication(err))
+		} else {
+			Ok(())
+		}
+	}
 }
 
 impl Performer {
@@ -234,7 +257,7 @@ impl Performer {
 										Event::Midi(midi_message) => Some((track, midi_message)),
 										_ => None
 									}
-								},
+								}
 								ToConsole::Stopped => {
 									self.is_playing = false;
 									None

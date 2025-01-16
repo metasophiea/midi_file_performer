@@ -2,8 +2,8 @@ use crate::score::Event;
 
 pub enum ToConsole {
 	Event(usize, Event),
-	Stopped,
-	PositionUpdate(usize)
+	PositionUpdate(usize),
+	Stopped
 }
 
 #[derive(Debug)]
@@ -13,5 +13,6 @@ pub enum ToEngine {
 	Pause,
 	Stop,
 	JumpTo(usize),
+	SetLooping(bool),
 	SetSpeed(f32)
 }

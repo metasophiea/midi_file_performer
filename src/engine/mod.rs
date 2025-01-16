@@ -32,6 +32,7 @@ pub fn engine(
 		let mut play = false;
 		let mut position:usize = 0;
 		let mut speed:f32 = 1.0;
+		let mut looping = false;
 
 	while !halt {
 		channel_from_console.try_iter().for_each(|message| {
@@ -57,6 +58,9 @@ pub fn engine(
 						speed = new_speed;
 						timer.set_speed(speed);
 					}
+				},
+				ToEngine::SetLooping(new_state) => {
+					looping = new_state;
 				},
 			}
 		});
@@ -93,6 +97,8 @@ pub fn engine(
 					position += ticks;
 					std::thread::sleep(sleep_duration);
 
+			} else if looping {
+				position = 0;
 			} else {
 				play = false;
 				if let Err(err) = channel_to_console.send(ToConsole::Stopped) {

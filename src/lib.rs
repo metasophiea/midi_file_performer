@@ -124,6 +124,9 @@ impl Performer {
 				.unwrap_or_else(|| panic!("position is either beyond the length of the score or the score does not contain any tempo messages"))
 		) as usize
 	}
+	pub fn get_current_bpm(&self) -> f32 {
+		1.0 / ((self.get_current_microseconds_per_beat() as f32 / 1_000_000.0) / 60.0)
+	}
 }
 
 impl Performer {
@@ -174,6 +177,8 @@ impl Performer {
 		if position >= self.score.len() {
 			return Err(Error::BeyondScoreLength);
 		}
+
+		self.position = position;
 
 		if let Err(err) = self.channel_to_engine.send(ToEngine::JumpTo(position)) {
 			Err(Error::Communication(err))

@@ -16,7 +16,7 @@ impl Timer {
 	///
 	/// Initially the tempo will be set to infinity. This is rarely an issue as a tempo change
 	/// message will set it, which is usual found in the first tick of a score.
-	pub fn new(ticks_per_beat:u16) -> Timer {
+	pub fn new_with_ticks_per_beat(ticks_per_beat:u16) -> Timer {
 		Timer {
 			ticks_per_beat,
 			micros_per_tick: 0.0,
@@ -25,21 +25,21 @@ impl Timer {
 			speed: 1.0,
 		}
 	}
-}
 
-impl TryFrom<Timing> for Timer {
-	type Error = ();
-
-	/// Tries to create a [Timer] from the provided [Timing].
+	/// Create an instance of a [Timer] with the given [Timing].
 	///
-	/// # Errors
-	/// Will return an error if the given [Timing] is not [`Timing::Metrical`].
-	fn try_from(t: Timing) -> Result<Timer, Self::Error> {
-		match t {
-			Timing::Metrical(n) => Ok(Timer::new(u16::from(n))),
-			Timing::Timecode(_frames_per_second, _ticks_per_frame) => Err(()),
-		}
-	}
+	/// Initially the tempo will be set to infinity. This is rarely an issue as a tempo change
+	/// message will set it, which is usual found in the first tick of a score.
+	pub fn new(timing:Timing) -> Result<Timer, ()> {
+		let ticks_per_beat = match timing {
+			Timing::Metrical(n) => u16::from(n),
+			Timing::Timecode(_frames_per_second, _ticks_per_frame) => {
+				return Err(())
+			},
+		};
+
+		Ok(Timer::new_with_ticks_per_beat(ticks_per_beat))
+	}	
 }
 
 impl Timer {
@@ -63,16 +63,6 @@ impl Timer {
 		}
 	}
 
-	pub fn calculate_number_of_ticks_that_would_fit_within_duration(&self, duration:Duration) -> usize {
-		let duration_of_one_tick = self.calculate_duration_of_ticks(1);
-
-		if duration_of_one_tick >= duration {
-			return 0;
-		}
-
-		duration.div_duration_f64(duration_of_one_tick).trunc() as usize - 1
-	}
-
 	pub fn calculate_sleeping_time(&mut self, ticks:usize) -> Duration {
 		let mut duration = self.calculate_duration_of_ticks(ticks);
 
@@ -89,9 +79,6 @@ impl Timer {
 }
 
 impl Timer {
-	pub fn get_speed(&self) -> f32 {
-		self.speed
-	}
 	pub fn set_speed(&mut self, speed:f32) {
 		self.speed = speed;
 	}

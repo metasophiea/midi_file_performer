@@ -20,7 +20,7 @@ mod constant_tempo {
 		let score = Score::new(&standard_midi_file).ok().unwrap();
 		
 		assert_eq!(
-			score.get_microseconds_per_beat_changes(),
+			score.microseconds_per_beat_changes,
 			[
 				(0, u24::new(500000)), //120
 			]
@@ -79,6 +79,50 @@ mod constant_tempo {
 			Duration::from_micros(4_001_041)
 		);
 	}
+
+	#[test]
+	pub fn calculate_ticks_until_next_events_from_index_1() {
+		let standard_midi_file = midly::Smf::parse(MID_FILE_DATA).unwrap();
+		let score = Score::new(&standard_midi_file).ok().unwrap();
+
+		assert_eq!(
+			score.calculate_ticks_until_next_events_from_index(0),
+			Some(960)
+		);
+	}
+
+	#[test]
+	pub fn calculate_ticks_until_next_events_from_index_2() {
+		let standard_midi_file = midly::Smf::parse(MID_FILE_DATA).unwrap();
+		let score = Score::new(&standard_midi_file).ok().unwrap();
+
+		assert_eq!(
+			score.calculate_ticks_until_next_events_from_index(1),
+			Some(959)
+		);
+	}
+
+	#[test]
+	pub fn calculate_ticks_until_next_events_from_index_3() {
+		let standard_midi_file = midly::Smf::parse(MID_FILE_DATA).unwrap();
+		let score = Score::new(&standard_midi_file).ok().unwrap();
+
+		assert_eq!(
+			score.calculate_ticks_until_next_events_from_index(959),
+			Some(1)
+		);
+	}
+
+	#[test]
+	pub fn calculate_ticks_until_next_events_from_index_4() {
+		let standard_midi_file = midly::Smf::parse(MID_FILE_DATA).unwrap();
+		let score = Score::new(&standard_midi_file).ok().unwrap();
+
+		assert_eq!(
+			score.calculate_ticks_until_next_events_from_index(960),
+			Some(960)
+		);
+	}
 }
 
 mod changing_tempo {
@@ -103,7 +147,7 @@ mod changing_tempo {
 		let score = Score::new(&standard_midi_file).ok().unwrap();
 		
 		assert_eq!(
-			score.get_microseconds_per_beat_changes(),
+			score.microseconds_per_beat_changes,
 			[
 				(0, u24::new(500000)), //120
 				(3840, u24::new(428571)), //140

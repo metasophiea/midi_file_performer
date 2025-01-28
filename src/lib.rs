@@ -7,6 +7,7 @@ use std::{thread::JoinHandle, time::Duration};
 
 use midly::Smf;
 
+mod sleep;
 mod timer;
 use timer::Timer;
 mod score;
@@ -121,7 +122,7 @@ impl Performer {
 
 		u32::from(
 			self.score.get_microseconds_per_beat_at(position)
-				.unwrap_or_else(|| panic!("position is either beyond the length of the score or the score does not contain any tempo messages"))
+				.unwrap_or_else(|| panic!("position is either beyond the length of the score (which we already checked for) or the score does not contain any tempo messages"))
 		) as usize
 	}
 	pub fn get_current_bpm(&self) -> f32 {

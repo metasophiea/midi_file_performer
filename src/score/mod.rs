@@ -99,7 +99,7 @@ impl Score {
 			}
 
 		//create new timer
-			let mut working_timer = Timer::try_from(self.timing).expect("we ensured that the timing format was compatible in the \"new\" method");
+			let mut working_timer = Timer::new(self.timing).expect("we ensured that the timing format was compatible in the \"new\" method");
 			working_timer.set_speed(speed);
 
 		//calculate
@@ -123,7 +123,7 @@ impl Score {
 			}
 
 		//create new timer
-			let mut working_timer = Timer::try_from(self.timing).expect("we ensured that the timing format was compatible in the \"new\" method");
+			let mut working_timer = Timer::new(self.timing).expect("we ensured that the timing format was compatible in the \"new\" method");
 			working_timer.set_speed(speed);
 
 		//calculate
@@ -173,9 +173,6 @@ impl Score {
 }
 
 impl Score {
-	pub fn get_microseconds_per_beat_changes(&self) -> &[(usize, u24)] {
-		&self.microseconds_per_beat_changes
-	}
 	pub fn get_microseconds_per_beat_at(&self, index:usize) -> Option<u24> {
 		if index == 0 {
 			self.microseconds_per_beat_changes.get(0).map(|(_, tempo)| *tempo)
@@ -199,25 +196,3 @@ impl Score {
 			.min()
 	}
 }
-
-// impl Score {
-// 	pub fn print(&self) {
-// 		println!("score: ({})", self.len());
-// 		let moments = self.get_moments();
-// 		let mut index = 0;
-// 		while index < moments.len() {
-// 			let mut empty_count = 0;
-// 			while moments[index].is_empty() {
-// 				empty_count += 1;
-// 				index += 1;
-// 			}
-// 			if empty_count != 0 {
-// 				println!("\t{empty_count} empty moments");
-// 			}
-
-// 			println!("\t{:?}", moments[index]);
-
-// 			index += 1;
-// 		}
-// 	}
-// }

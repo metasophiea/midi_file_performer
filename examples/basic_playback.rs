@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{thread::sleep, time::Duration};
 
 use clap::Parser;
 use midir::{os::unix::VirtualOutput, MidiOutput};
@@ -56,9 +56,10 @@ fn main() {
 
 	//load midi file
 		let standard_midi_file = midly::Smf::parse(include_bytes!("../test_midi_files/scarborough_fair.mid")).unwrap();
-	
+
 	//perform
 		let mut performer = Performer::new(standard_midi_file);
+		sleep(Duration::from_millis(250));
 		performer.play().ok();
 
 	loop {

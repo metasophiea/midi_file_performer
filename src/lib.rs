@@ -113,20 +113,30 @@ impl Performer {
 		self.score.calculate_duration_until(self.speed, self.position)
 	}
 	
-	pub fn get_current_microseconds_per_beat(&self) -> usize {
+	/// Get the number of microseconds per beat at the current position
+	///
+	/// # Errors
+	/// Will return an [`Error::NoTempo`] if the midi score does not contain any tempo messages.
+	pub fn get_current_microseconds_per_beat(&self) -> Result<usize, Error> {
 		let position = if self.position >= self.score.len() {
 			self.score.len() - 1
 		} else {
 			self.position
 		};
 
-		u32::from(
-			self.score.get_microseconds_per_beat_at(position)
-				.unwrap_or_else(|| panic!("position is either beyond the length of the score (which we already checked for) or the score does not contain any tempo messages"))
-		) as usize
+		if let Some(microseconds_per_beat) = self.score.get_microseconds_per_beat_at(position) {
+			Ok(u32::from(microseconds_per_beat) as usize)
+		} else {
+			Err(Error::NoTempo)
+		}
 	}
-	pub fn get_current_bpm(&self) -> f32 {
-		1.0 / ((self.get_current_microseconds_per_beat() as f32 / 1_000_000.0) / 60.0)
+
+	/// Get the number of beats per minute at the current position
+	///
+	/// # Errors
+	/// Will return an [`Error::NoTempo`] if the midi score does not contain any tempo messages.
+	pub fn get_current_bpm(&self) -> Result<f32, Error> {
+		Ok(1.0 / ((self.get_current_microseconds_per_beat()? as f32 / 1_000_000.0) / 60.0))
 	}
 }
 

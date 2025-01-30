@@ -20,9 +20,13 @@ impl MidiEvent {
 }
 
 impl MidiEvent {
+	/// Encode [`MidiEvent`] as a midi message.
+	/// 
+	/// # Panics
+	/// - Will panic if unable to encode as [`LiveEvent`]
 	pub fn encode(&self) -> Vec<u8> {
 		let mut buf = Vec::new();
-		self.into_live_event().write(&mut buf).unwrap();
+		self.into_live_event().write(&mut buf).unwrap_or_else(|err| panic!("MidiEvent - could not encode self as live event - err: {err}"));
 		buf
 	}
 }

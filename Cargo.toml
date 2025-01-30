@@ -1,6 +1,6 @@
 [package]
 	name = "midi_file_performer"
-	version = "0.7.0"
+	version = "0.7.1"
 	license = "MIT OR Apache-2.0"
 	authors = ["Brandon Walsh <metasophiea@gmail.com>"]
 	readme = "README.md"

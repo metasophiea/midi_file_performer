@@ -65,7 +65,7 @@ mod constant_tempo {
 
 		assert_eq!(
 			score.calculate_duration(1.0),
-			Duration::from_micros(16001041)
+			Duration::from_secs_f64(15.990800858)
 		);
 	}
 
@@ -76,7 +76,7 @@ mod constant_tempo {
 
 		assert_eq!(
 			score.calculate_duration_until(1.0, 3841),
-			Duration::from_micros(4_001_041)
+			Duration::from_secs_f64(3.998481035)
 		);
 	}
 
@@ -214,7 +214,7 @@ mod changing_tempo {
 
 		assert_eq!(
 			score.calculate_duration(1.0),
-			Duration::from_micros(15_929_311)
+			Duration::from_secs_f64(15.919760883)
 		);
 	}
 
@@ -225,7 +225,7 @@ mod changing_tempo {
 
 		assert_eq!(
 			score.calculate_duration_until(1.0, 3841),
-			Duration::from_micros(4_000_892)
+			Duration::from_secs_f64(3.998331861)
 		);
 	}
 }

@@ -20,6 +20,8 @@ pub enum Error {
 	NegativeSpeed,
 	/// The engine thread is missing.
 	NoEngine,
+	/// The midi score does not contain any tempo messages.
+	NoTempo,
 	/// A [`ScoreError`].
 	Score(ScoreError),
 	/// An error returned by the [`std::thread::JoinHandle::join`] method of the thread holding the engine.

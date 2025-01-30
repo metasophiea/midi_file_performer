@@ -26,7 +26,8 @@ pub struct Score {
 	timing: Timing,
 	tracks: Vec<Track>,
 
-	microseconds_per_beat_changes: Vec<(usize, u24)>
+	microseconds_per_beat_changes: Vec<(usize, u24)>,
+	ticks_until_next_events_codex: Vec<usize>
 }
 
 impl Score {
@@ -49,30 +50,45 @@ impl Score {
 	}
 
 	pub fn new(standard_midi_file:&Smf) -> Result<Score, Error> {
-		if let Timing::Timecode(_, _) = standard_midi_file.header.timing {
-			return Err(Error::TimingFormat);
-		}
+		//check timecode
+			if let Timing::Timecode(_, _) = standard_midi_file.header.timing {
+				return Err(Error::TimingFormat);
+			}
 
-		let tracks = match standard_midi_file.header.format {
-			Format::SingleTrack | Format::Parallel=> Score::parallel(&standard_midi_file.tracks),
-			Format::Sequential => Score::sequential(&standard_midi_file.tracks),
-		};
+		//tracks
+			let tracks = match standard_midi_file.header.format {
+				Format::SingleTrack | Format::Parallel => Score::parallel(&standard_midi_file.tracks),
+				Format::Sequential => Score::sequential(&standard_midi_file.tracks),
+			};
 
-		let mut microseconds_per_beat_changes:Vec<(usize, u24)> = tracks
-			.iter()
-			.map(|track| track.get_all_tempos().to_vec())
-			.flatten()
-			.collect();
-		microseconds_per_beat_changes.sort_by_key(|tempo| tempo.0);
-		if microseconds_per_beat_changes.is_empty() {
-			return Err(Error::NoTempo);
-		}
+		//microseconds_per_beat_changes
+			let mut microseconds_per_beat_changes:Vec<(usize, u24)> = tracks
+				.iter()
+				.flat_map(|track| track.get_all_tempos().to_vec())
+				.collect();
+			microseconds_per_beat_changes.sort_by_key(|tempo| tempo.0);
+			if microseconds_per_beat_changes.is_empty() {
+				return Err(Error::NoTempo);
+			}
 
+		//ticks_until_next_events_codex
+			let mut ticks_until_next_events_codex = tracks[0].calculate_ticks_until_next_event_codex();
+			tracks.iter().skip(1).for_each(|track| {
+				track.calculate_ticks_until_next_event_codex().into_iter().enumerate().for_each(|(index, distance)| {
+					if ticks_until_next_events_codex.len() <= index {
+						ticks_until_next_events_codex.push(distance);
+					} else if ticks_until_next_events_codex[index] > distance {
+						ticks_until_next_events_codex[index] = distance;
+					}
+				});
+			});
+		
 		Ok(
 			Score {
 				timing: standard_midi_file.header.timing,
 				tracks,
 				microseconds_per_beat_changes,
+				ticks_until_next_events_codex
 			}
 		)
 	}
@@ -99,7 +115,7 @@ impl Score {
 			}
 
 		//create new timer
-			let mut working_timer = Timer::new(self.timing).expect("we ensured that the timing format was compatible in the \"new\" method");
+			let mut working_timer = Timer::new(self.timing, Duration::ZERO).expect("we ensured that the timing format was compatible in the \"new\" method");
 			working_timer.set_speed(speed);
 
 		//calculate
@@ -123,7 +139,7 @@ impl Score {
 			}
 
 		//create new timer
-			let mut working_timer = Timer::new(self.timing).expect("we ensured that the timing format was compatible in the \"new\" method");
+			let mut working_timer = Timer::new(self.timing, Duration::ZERO).expect("we ensured that the timing format was compatible in the \"new\" method");
 			working_timer.set_speed(speed);
 
 		//calculate
@@ -175,11 +191,11 @@ impl Score {
 impl Score {
 	pub fn get_microseconds_per_beat_at(&self, index:usize) -> Option<u24> {
 		if index == 0 {
-			self.microseconds_per_beat_changes.get(0).map(|(_, tempo)| *tempo)
+			self.microseconds_per_beat_changes.first().map(|(_, tempo)| *tempo)
 		} else if index >= self.len() {
 			None
 		} else if self.microseconds_per_beat_changes.len() == 1 {
-			self.microseconds_per_beat_changes.get(0).map(|(_, tempo)| *tempo)
+			self.microseconds_per_beat_changes.first().map(|(_, tempo)| *tempo)
 		} else {
 			self.microseconds_per_beat_changes
 				.iter()
@@ -190,9 +206,10 @@ impl Score {
 	}
 
 	pub fn calculate_ticks_until_next_events_from_index(&self, index:usize) -> Option<usize> {
-		self.tracks
-			.iter()
-			.filter_map(|track| track.calculate_ticks_until_next_events_from_index(index))
-			.min()
+		if self.ticks_until_next_events_codex.len() <= index + 1 {
+			return None;
+		}
+
+		Some(self.ticks_until_next_events_codex[index])
 	}
 }
